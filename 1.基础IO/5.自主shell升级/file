@@ -1,0 +1,7 @@
+总用量 20
+ 2649850 drwxrwxr-x. 2 wg wg   60 10月 19 03:06 .
+52456071 drwxrwxr-x. 8 wg wg  116 10月 18 00:43 ..
+ 2780814 -rw-rw-r--. 1 wg wg    0 10月 19 03:04 file
+ 2780817 -rw-rw-r--. 1 wg wg   64 10月 19 03:03 Makefile
+ 2780816 -rwxrwxr-x. 1 wg wg 9104 10月 19 03:06 test
+ 2649833 -rw-rw-r--. 1 wg wg 1786 10月 19 02:42 test.c
