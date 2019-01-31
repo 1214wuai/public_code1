@@ -19,6 +19,12 @@ class EpollServer
       //eventfd
     }
 
+    void RemoveConnect(int fd);
+    void SendInLoop(int fd, const char* buf, size_t len);
+    void Forwarding(Channel* clientChannel, Channel* serverChannel, 
+        bool recvDecrypt, bool sendEncry);
+    
+    
     //启动服务，开始监听
     void Start();
 
@@ -39,7 +45,7 @@ class EpollServer
 
     int _eventfd;//事件描述符
     static const size_t _MAX_EVENT;//最大事件数
-
+    map<int, Connect*> _connectMap;
 };
 
 

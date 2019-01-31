@@ -10,9 +10,9 @@ class TransferServer : public EpollServer
   {
     //父类在初始化列表初始化
     memset(&_socks5addr,0,sizeof(struct sockaddr_in));
-    _socks5addr.sin_family = AF_ONET;
+    _socks5addr.sin_family = AF_INET;
     _socks5addr.sin_port = htons(socks5ServerPort);
-    _socks5addr.sin_addr.s_addr = inet adddr(socks5ServerIp);
+    _socks5addr.sin_addr.s_addr = inet_addr(socks5ServerIp);
   }
     virtual void ConnectEventHandle(int connectfd);
     virtual void ReadEventHandle(int connectfd);
