@@ -105,6 +105,8 @@ private:
   //static是为了这个函数只能有一个参数，不能有隐含的this指针
   static void* thr_start(void* arg)
   {
+   while(1)
+   {
     ThreadPool *tp  = (ThreadPool*)arg;
     tp->QueueLock();
     while (tp->QueueIsEmpty())
@@ -116,7 +118,8 @@ private:
     tp->PopTask(ht);
     tp->QueueUnLock();
     ht.Run();
-    return NULL;
+    
+  }
   }
 
 public:
