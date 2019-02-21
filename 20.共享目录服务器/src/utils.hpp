@@ -247,22 +247,29 @@ class HttpRequest
     //判断请求报头首行的路径是否合法
     bool PathIsLegal(std::string &path, RequestInfo &info)
     {
+      //GET / HTTP/1.1
+      //file = www/ 
       std::string file = WWWROOT + path;
+      std::cout << "_path_info-----" << file  << "\n\n\n\n";
       //stat函数，通过路径获取文件信息
+      //stat函数不需要物理路径获取文件的信息，只需要相对路径就好了
       if(stat(file.c_str(), &(info._st)) < 0)////////////////////////////
       {
         info._err_code = "404";
         return false;
       }
       char tmp[MAX_PATH] = {0};
+      //使用realpath函数进行了虚拟路径转化到物理路径的时候，就自动把最后后面的一个/去掉
       realpath(file.c_str(), tmp);//realpath函数将相对路径转换成绝对路径
+      std::cout << "_path_info-----" << info._path_info << "\n\n\n\n";
+      std::cout << "_path_phys-----" << tmp << "\n\n\n\n";
       info._path_phys = tmp;//物理路径
+      //如果路径不在WWW下面
       if(info._path_phys.find(WWWROOT) == std::string::npos)
       {
         info._err_code = "403";
         return false;
       }
-      //如果路径不在WWW下面
 
       return true;
     }
@@ -303,8 +310,8 @@ class HttpRequest
         info._query_string = url.substr(pos + 1);
         //realpath函数，将相对路径转换成绝对路径，发生错误就是段错误
       }
-
-      return PathIsLegal(info._path_info, info);
+      PathIsLegal(info._path_info, info);
+      return true;
     }
 
     //解析http请求头

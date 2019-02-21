@@ -1,7 +1,7 @@
 .PHONY:all
-all:main utils
+all:httpserver utils
 
-main:httpserver.cpp
+httpserver:httpserver.cpp
 	g++ -o $@ $^ -l pthread -std=c++11
 
 utils:utils.cpp
@@ -9,4 +9,4 @@ utils:utils.cpp
 
 .PHONY:clean
 clean:
-	rm main utils -f
+	rm httpserver utils -f

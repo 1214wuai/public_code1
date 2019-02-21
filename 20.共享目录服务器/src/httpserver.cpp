@@ -61,6 +61,7 @@ class HttpResponse
     //发送正文
     bool SendCData(const std::string& buf)
     {
+      std::cout << "In SendCData" << std::endl;
       //发送hello word
       //05\r\n
       //hello word\r\n
@@ -132,7 +133,7 @@ class HttpResponse
       std::string rsp_header;
 
       rsp_header = info._version + " 200 OK\r\n";
-      rsp_header += "Content-Type:text/html\r\n";
+    //  rsp_header += "Content-Type:text/html\r\n";
       rsp_header += "Connection: close\r\n";
       if(info._version == "HTTP/1.1")
       {
@@ -145,39 +146,51 @@ class HttpResponse
 
       std::string rsp_body;
       rsp_body = "<html><head>";
-      rsp_body += "<title>" + info._path_info + "</title>";
+      //rsp_body += "<title>" + info._path_info + "</title>";
+      rsp_body += "<title>WenSir";
+      rsp_body += "</title>";
       rsp_body += "<meta charset='UTF-8'>";
       rsp_body += "</head><body>";
-      rsp_body += "<h1>Index of" + info._path_info+"</h1><hr /><or>";
+      //rsp_body += "<h1>Index of" + info._path_info+"</h1><hr /><or>";
+      rsp_body += "<h1>Welcome to my server";
+      rsp_body += "</h1>";
       rsp_body += "<form action='/upload' method='POST' enctype='multipart/from-data'>";
       rsp_body += "<input type='file' name='FileUpLoad' />";
       rsp_body += "<input type='submit' value='上传' />";
+      rsp_body += "</form>";
+      rsp_body += "<hr /><ol>";
       SendCData(rsp_body);
       // while(1)
       //std::string file_html;
 
-      std::string path = info._path_phys;
       struct dirent** p_dirent = NULL;
       //scandir函数,的哥参数，第二个参数：三级指针，第三个参数：filter过滤掉“.”给1，不过滤给0，第四个参数来进行排序
       //获取目录下的每一个文件，组织html信息，chunke传输
       //readdir函数
       // file_html = "<li>";
-      int num = scandir(info._path_phys.c_str(), &p_dirent, 0, alphasort);
+      int num = scandir(info._path_phys.c_str(), &p_dirent, NULL, alphasort);
       for(int i = 0; i< num; i++)
       {
-        std::string file;
+        std::string file_path;
         std::string file_html;
-        file = info._path_phys + p_dirent[i]->d_name;
+        file_path += info._path_phys + p_dirent[i]->d_name;
+        std::cout << file_path << std::endl;
+        
         struct stat st;
-        if(stat(file.c_str(), &st) < 0)
+        //获取文件信息
+        if(stat(file_path.c_str(), &st) < 0)
+        {
+          std::cout<<"lllllwwwwlllllll"<<std::endl;
           continue;
+        }
 
+        std::cout<<"lllllkkkkklllllll"<<std::endl;
         std::string mtime;
         std::string mime;
-        Utils::GetMime(p_dirent[i]->d_name, mime);
         std::string fsize;
-        Utils::DigitToStr(st.st_size / 1024, fsize);
         Utils::TimeToGMT(st.st_mtime, mtime);
+        Utils::GetMime(p_dirent[i]->d_name, mime);
+        Utils::DigitToStr(st.st_size / 1024, fsize);
         file_html += "<li><strong><a href='"+ info._path_info;
         file_html += p_dirent[i]->d_name;
         file_html += "'>";
@@ -185,15 +198,17 @@ class HttpResponse
         file_html += "</a></strong>";
         file_html += "<br /><small>";
         file_html += "modifued: " + mtime + "<br />";
-        file_html += mime + " - " += fsize + " kbytes";
+        file_html += mime + " - " + fsize + " kbytes";
         file_html += "<br /><br /></small></li>";
 
         //file_html += "</small>" + info._err_code + "</li>";
+        std::cout<<"llllllllllll"<<std::endl;
         SendCData(file_html);
+        std::cout<<"hhhhhhhhhhhhh"<<std::endl;
       }
       rsp_body = "</ol><hr /></body></html>";
       SendCData(rsp_body);
-      //进行分块发送的时候告诉
+      //进行分块发送的时候告诉客户端已经方法送完毕了，不再让客户端进行洗个等待正文的过程了
       SendCData("");
       return true;
     }		
@@ -318,15 +333,19 @@ class HttpResponse
 
     bool FileIsDir(RequestInfo &info)
     {
-      std::string path = info._path_info;
+      std::string path_info = info._path_info;
+      std::string path_phys = info._path_phys;
       if(info._st.st_mode & S_IFDIR)
       {
-        if(path[path.length() -1] != '/')
+        if(path_info[path_info.length() -1] != '/')
           info._path_info.push_back('/');
+        if(path_phys[path_phys.length() -1] != '/')
+          info._path_phys.push_back('/');
         return true;
       }
-      if(path[path.length() -1] != '/')
-        info._path_info.push_back('/');
+
+      std::cout <<  info._path_phys << std::endl;
+      std::cout <<  info._path_info << std::endl;
       return false;
     }
 
@@ -335,6 +354,7 @@ class HttpResponse
       InitResponse(info);//初始化CGI响应信息
       ProcessCGI(info);
       // FileIsDir(info)
+      return true;
     }
     bool FileHandler(RequestInfo &info)
     {
