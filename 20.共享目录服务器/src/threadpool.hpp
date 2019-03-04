@@ -1,3 +1,5 @@
+#ifndef _THREADPOOL_HPP_
+#define _THREADPOOL_HPP_
 #include "utils.hpp"
 #include <queue>
 
@@ -120,6 +122,7 @@ private:
     ht.Run();
     
   }
+   return NULL;
   }
 
 public:
@@ -196,3 +199,6 @@ public:
   }
 
 };
+
+
+#endif //_THREADPOOL_HPP
