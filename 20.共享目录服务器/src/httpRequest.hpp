@@ -15,6 +15,9 @@ public:
   std::string _query_string;//查询字符串 
   std::unordered_map<std::string, std::string> _hdr_list;//头部当中的键值对  
   struct stat _st; //获取文件信息 
+
+  size_t _part;
+  std::vector<std::string> _part_list;
 public:
   std::string _err_code;
 public:

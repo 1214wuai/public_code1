@@ -108,6 +108,12 @@ class Utils{
       str=ss.str();
     }
 
+    static void DigitToStrFsize(double num, std::string &str)
+    {
+      std::stringstream ss;
+      ss<<num;
+      str=ss.str();
+    }
     static int64_t StrToDig(const std::string &str)
     {
       int64_t num;

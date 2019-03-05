@@ -84,6 +84,111 @@ class HttpResponse
       return true;
     }
 
+    bool IsPartDownload(RequestInfo& info)
+    {
+      auto it = info._hdr_list.find("If-Range");
+      std::cout<<"etag:" <<_etag<<"_date: "<<_date<<std::endl;
+      if(it == info._hdr_list.end())
+      {
+        return false;//不是断点续传
+      }
+      if(it->second == _mtime || it->second == _etag)
+        ;
+      else 
+        return false;
+      it = info._hdr_list.find("Range");
+      if(it == info._hdr_list.end())
+      {
+        return false;
+      }
+      else
+      {
+        std::string range = it->second;
+        std::cout << "range:" << range << std::endl;
+        info._part = Utils::Split(range,", ", info._part_list);
+        return true;
+      }
+      return true;
+    }
+
+    bool ProcessPartDownload(RequestInfo& info, int i)
+    {
+      std::cout<< "HttpResponse 116 :In ProcessPartDownload" <<std::endl;
+      std::string range = info._part_list[i];
+      if(i == 0)
+      {
+        //第一个发送的快，要将bytes=去掉
+        range.erase(range.begin(), range.begin() + 6);
+      }
+      std::cout << "delete range: " << range << std::endl;
+
+      size_t pos = range.find("-");
+      int64_t start = 0;
+      int64_t end = 0;
+      //-500,最后500个字节
+      if(pos == 0)
+      {
+        end = Utils::StrToDig(_filesize) -1;
+        start = end - Utils::StrToDig(range.substr(pos+1));
+      }
+      //500-,从此开始到文件最后
+      else if(pos == (range.size()-1))
+      {
+        end = Utils::StrToDig(_filesize) -1;
+        range.erase(pos,1);//将-删除
+        start = Utils::StrToDig(range); 
+      }
+      //200-500，者一段的数据进行传输
+      else
+      {
+        start = Utils::StrToDig(range.substr(0,pos));
+        end = Utils::StrToDig(range.substr(pos+1));
+      }
+
+      //构造响应头
+      std::string rsp_header;
+      rsp_header = info._version + "206 PARTIAL CONTENT\r\n";
+      rsp_header += "Content-Type: " + _mime + "\r\n";
+      
+      std::string len;
+      Utils::DigitToStr(end-start+1,len);
+      
+      rsp_header += "Connection: close\r\n";
+      rsp_header += "Content-Range: bytes " + Utils::DigitToStr(start)+ "-" + Utils::DigitToStr(end) + "/" + _filesize + "\r\n";
+      
+      rsp_header += "Content-Length: " + len + "\r\n";
+      rsp_header += "Accept_Ranges: bytes\r\n";
+      if(info._part_list.size() > 1)
+      {
+        rsp_header += "Content-Type: multipart/byteranges\r\n";
+      }
+      rsp_header += "Etag: " + _etag + "\r\n";
+      rsp_header += "Last-Modified: " + _mtime + "\r\n";
+      rsp_header += "Date: " + _date + "\r\n\r\n";
+      SendData(rsp_header);
+
+      std::cout<<"HttpResponse.cpp 170 : part:rsp_header\n" << rsp_header << std::endl;
+      std::cout<<"HttpResponse.cpp 171 : phys:" << info._path_phys.c_str() << std::endl;
+
+      int file_fd = open(info._path_phys.c_str(),O_RDONLY);
+      if(file_fd < 0)
+      {
+        std::cout << "HttpRespons.cpp 176 : error open!" << std::endl;
+        info._err_code = "400";
+        ErrHandler(info);
+        return false;
+      }
+      lseek(file_fd, start,SEEK_SET);
+      int64_t title_len = end - start + 1;
+      int64_t rlen;
+      int64_t flen = 0;
+      char tmp[MAX_BUFF];
+      while((rlen = read(file_fd, tmp, MAX_BUFF)) > 0)
+      {
+
+      }
+
+    }
     bool ProcessFile(RequestInfo &info)//文件下载功能
     {
 
@@ -179,10 +284,8 @@ class HttpResponse
       for(int i = 0; i< num; i++)
       {
         std::string file_path;
-        std::string file_html;
-        file_path += info._path_phys + p_dirent[i]->d_name;
-        //std::cout << file_path << std::endl; //测试
-        
+        std::string file_html; 
+        file_path += info._path_phys + p_dirent[i]->d_name; 
         struct stat st;
         //获取文件信息
         if(stat(file_path.c_str(), &st) < 0)
@@ -196,7 +299,7 @@ class HttpResponse
         std::string fsize;
         Utils::TimeToGMT(st.st_mtime, mtime);
         Utils::GetMime(p_dirent[i]->d_name, mime);
-        Utils::DigitToStr(st.st_size / 1024, fsize);
+        Utils::DigitToStrFsize(st.st_size / 1024, fsize);
         file_html += "<li><strong><a href='"+ info._path_info;//href+路径，点击就会连接，进入到一个文件或者目录之后，给这个文件或者目录的网页地址前面加上路径
         file_html += p_dirent[i]->d_name;
         file_html += "'>";
@@ -314,7 +417,10 @@ class HttpResponse
         char buf[MAX_BUFF] = {0};
         int rlen = read(out[0], buf, MAX_BUFF);
         if(rlen == 0)
+        {
           break;
+        }
+        //std::cout << "buf->"<<buf << std::endl;
         send(_cli_sock, buf, rlen, 0);
       }
       close(in[1]);

@@ -99,7 +99,7 @@ class Upload
       _file_name = WWWROOT;
       _file_name += "/";
       _file_name += file;
-      fprintf(stderr, "upload file:[%s]\n", _file_name.c_str());
+      fprintf(stderr, "upload.cpp :102 upload file:[%s]\n", _file_name.c_str());
       return true;
     }
 
@@ -109,7 +109,7 @@ class Upload
       if(_file_fd < 0)
       {
 
-        fprintf(stderr, "open error:%s\n", strerror(errno));
+        fprintf(stderr, "\n\nupload.cpp 112 : open error:%s\n", strerror(errno));
         return false;
       }
       return true;
@@ -126,10 +126,13 @@ class Upload
     }
     bool WriteFile(char* buf, int len)
     {
+      fprintf(stderr,"\n\nupload : 129  In WriteFile");
       if(_file_fd != -1)
       {
         write(_file_fd, buf, len);
       }
+      fprintf(stderr,"\n_file_fd:[%d]  len:[%d]\n",_file_fd,len);
+      fprintf(stderr,"upload : 134  Go Out WriteFile\n\n");
       return true;
     }
   public:
@@ -148,7 +151,7 @@ class Upload
       ptr = getenv("Content-Type");
       if(ptr == nullptr)
       {
-        fprintf(stderr, "have no content-type!!\n");
+        fprintf(stderr, "upload.cpp 152 : have no content-type!!\n");
         return false;
       }
       std::string boundry_sep = "boundary=";
@@ -156,7 +159,7 @@ class Upload
       size_t pos = content_type.find(boundry_sep);
       if(pos == std::string::npos)
       {
-        fprintf(stderr, "content type have no boundry!!\n");
+        fprintf(stderr, "upload.cpp 160 : content type have no boundry!!\n");
         return false;
       }
       std::string boundry;
@@ -182,22 +185,23 @@ class Upload
         //从管道中将数据读取出来
         int len = read(0, buf+blen,MAX_BUFF-blen);
         blen += len;//当前buf中数据的长度
-        int boundry_pos;
-        int content_pos;
+        int boundry_pos;//分隔符的下标
+        int content_pos;//文件名的开始下标
         int flag = MAtchBoundry(buf, blen, &boundry_pos);
         if(flag == BOUNDRY_FIRST)
         {
-          fprintf(stderr, "[In Boundry_First]\n");
+          fprintf(stderr, "[upload.cpp 191 : In Boundry_First]\n");
           //1.从boundary头汇总获取文件名
           //2.若获取文件名成功，则创建文件，打开文件
           //3.将头信息从buf中移除，剩下的数据进行下一步匹配
           if(GetFileName(buf, &content_pos))//如果获取到了文件名
           {
+            fprintf(stderr, "\n\nupload.cpp 197 : [filename:%s]\n\n", _file_name.c_str());
             CreatFile();
             blen -= content_pos;
             memmove(buf,buf+content_pos, blen);//把文件数据向前移动，就把之前的first_boundry等数据覆盖了
             memset(buf+blen, 0, content_pos);
-            fprintf(stderr, "[In BOUNDRY_FIRST去除分隔符和内容->buf:%s]", buf);
+            fprintf(stderr, "\n\nupload.cpp 202 :[In BOUNDRY_FIRST去除分隔符和内容->buf:%s]", buf);
           }
           else
           {
@@ -207,6 +211,8 @@ class Upload
             blen -= boundry_pos;
             memmove(buf, buf+boundry_pos, blen);
             memset(buf+blen, 0 , boundry_pos);
+            fprintf(stderr, "\n\nupload.cpp 214 :没有匹配到文件名\n");
+            fprintf(stderr, "upload.cpp 215 :[In BOUNDRY_FIRST只除分隔符->buf:%s]", buf);
           }
 
         }
@@ -215,6 +221,7 @@ class Upload
           flag = MAtchBoundry(buf, blen, &boundry_pos);
           if(flag != BOUNDRY_MIDDLE)
           {
+            fprintf(stderr, "\n\nupload 224 : 没有匹配到middle_boundary\n");
               break;//没有匹配到middle_boundry就跳出循环
           }
           //匹配成功
@@ -223,16 +230,18 @@ class Upload
           //3.看boundary头中是否有文件名，剩下的流程同first_boundry一样
 
           //如果有文件就打开，进行写入；没有文件就不进行写入直接将数据去除
+          fprintf(stderr, "\n\nupload 233 : middle_boundary调用WriteFile\n");
           WriteFile(buf, boundry_pos);//boundry_pos指向数据的最后，
           CloseFile();
           blen -= boundry_pos;//将文件数去除去
           memmove(buf, buf + content_pos, blen);
           memset(buf + blen, 0, boundry_pos);
-          
+          fprintf(stderr, "\n\nupload.cpp 234 :[In BOUNDRY_MIDDLE只除去middle分隔符->buf:%s]", buf);
           if(GetFileName(buf, &content_pos))
           {
             CreatFile();
-            memmove(buf,buf+content_pos, blen - content_pos);//把文件数据向前移动，就把之前的first_boundry等数据覆盖了
+            blen -= content_pos;
+            memmove(buf,buf+content_pos, blen);//把文件数据向前移动，就把之前的first_boundry等数据覆盖了
             memset(buf + blen, 0, content_pos);
           }
           else
@@ -256,6 +265,7 @@ class Upload
           //1.将boundary之前的数据集写入文件
           //2.关闭文件
           //3.上传文件处理完毕
+          fprintf(stderr, "\n\nupload.cpp 268 : In Last_boundary\n调用WriteFile");
           WriteFile(buf, boundry_pos);
           CloseFile();
           return true;
@@ -267,7 +277,7 @@ class Upload
           //将类似boundary位置之前的数据写入文件
           //1.移除之前的数据
           //2.剩下的数据不懂，重新接受数据，补全后匹配
-
+          fprintf(stderr,"\n\nupload : 280 匹配到半个boundary，调用WriteFile\n");
           WriteFile(buf, boundry_pos);//boundry_pos指向数据的最后，
           blen -= boundry_pos ;
           memmove(buf, buf + content_pos, blen);
@@ -278,6 +288,7 @@ class Upload
         if(flag == BOUNDRY_NO)
         {
           //直接将buf中所有写入文件
+          fprintf(stderr, "\n\nupload 291 : 没有匹配到boundary,调用WriteFile\n");
           WriteFile(buf, boundry_pos);//boundry_pos指向数据的最后，
           blen = 0;
         }
@@ -298,13 +309,14 @@ int main()
   }
   if(upload.ProcessUpload() == false)
   {
-    rsp_body = "<html><body><h1><FALSE!></h1></body></html>";
+    rsp_body = "<html><body><h1>FALSE!</h1></body></html>";
   }
   else
   {
-    rsp_body = "<html><body><h1><SUCCESS!></h1></body></html>";
+    fprintf(stderr, "\n\nupload 316 : CGI成功\n");
+    rsp_body = "<html><body><h1>SUCCESS!</h1></body></html>";
   }
-  std::cout<<rsp_body;
+  std::cout << rsp_body;
   fflush(stdout);
   return 0;
 }
